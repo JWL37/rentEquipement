@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оформление заказа</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4" id="order-status">Оформление заказа</h1>
+        <div class="card mx-auto" style="max-width: 600px;">
+            <div class="card-body">
+                <form id="order-form" method="POST" action="/api/v1/order">
+                    <!-- Выбор оборудования -->
+                    <div class="mb-3">
+                        <label for="equipment-select" class="form-label">Выберите оборудование</label>
+                        <select id="equipment-select" name="equipment_ID" class="form-select" required>
+                            <option value="" disabled selected>Загрузка оборудования...</option>
+                        </select>
+                    </div>
+                    <!-- Дата начала аренды -->
+                    <div class="mb-3">
+                        <label for="startRent" class="form-label">Дата начала аренды</label>
+                        <input type="date" id="startRent" name="startRent" class="form-control" required>
+                    </div>
+                    <!-- Количество дней аренды -->
+                    <div class="mb-3">
+                        <label for="countDay" class="form-label">Количество дней аренды</label>
+                        <input type="number" id="countDay" name="countDay" class="form-control" min="1" required>
+                    </div>
+                    <!-- Кнопка отправки -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Оформить заказ</button>
+                    </div>
+                </form>
+                <!-- Кнопка "Вернуться на главную" до оформления заказа -->
+                <div class="d-grid mt-3">
+                    <button class="btn btn-secondary" onclick="window.location.href='/'">Вернуться на главную</button>
+                </div>
+
+                <!-- Данные заказа -->
+                <div id="order-details" style="display:none;">
+                    <h3 class="text-center" id="order-message">Заказ оформлен</h3>
+                    <p><strong>Дата начала:</strong> <span id="start-date"></span></p>
+                    <p><strong>Дата окончания:</strong> <span id="end-date"></span></p>
+                    <p><strong>Общая сумма:</strong> <span id="total-cost"></span> руб.</p>
+                    <!-- Кнопка "Вернуться на главную" после оформления заказа -->
+                    <div class="d-grid mt-3">
+                        <button class="btn btn-secondary" onclick="window.location.href='/'">Вернуться на главную</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const equipmentSelect = document.getElementById('equipment-select');
+            const orderForm = document.getElementById('order-form');
+            const orderDetails = document.getElementById('order-details');
+            const orderMessage = document.getElementById('order-message');
+            const startDateElement = document.getElementById('start-date');
+            const endDateElement = document.getElementById('end-date');
+            const totalCostElement = document.getElementById('total-cost');
+
+            // Загрузка списка оборудования
+            try {
+                const response = await fetch('/api/v1/equipments');
+                if (response.ok) {
+                    const equipments = await response.json();
+                    equipmentSelect.innerHTML = '<option value="" disabled selected>Выберите оборудование</option>';
+                    equipments.forEach(equipment => {
+                        const option = document.createElement('option');
+                        option.value = equipment.id; // Значение для отправки
+                        option.textContent = equipment.name;
+                        equipmentSelect.appendChild(option);
+                    });
+                } else {
+                    equipmentSelect.innerHTML = '<option value="" disabled>Ошибка загрузки оборудования</option>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки оборудования:', error);
+                equipmentSelect.innerHTML = '<option value="" disabled>Ошибка загрузки оборудования</option>';
+            }
+
+            // Отправка формы и обработка ответа
+            orderForm.addEventListener('submit', async (event) => {
+                event.preventDefault(); // Отменить стандартное поведение формы
+                const formData = new FormData(orderForm);
+                const requestData = {
+                    method: 'POST',
+                    body: formData
+                };
+
+                try {
+                    const orderResponse = await fetch('/api/v1/order', requestData);
+                    if (orderResponse.ok) {
+                        const orderData = await orderResponse.json();
+                        // Показать данные заказа
+                        orderForm.style.display = 'none'; // Скрыть форму
+                        orderDetails.style.display = 'block'; // Показать детали заказа
+                        startDateElement.textContent = new Date(orderData.start_date).toLocaleDateString(); // Только дата
+                        endDateElement.textContent = new Date(orderData.end_date).toLocaleDateString(); // Только дата
+                        totalCostElement.textContent = orderData.total_cost;
+                    } else {
+                        alert('Ошибка при оформлении заказа');
+                    }
+                } catch (error) {
+                    console.error('Ошибка при отправке данных:', error);
+                    alert('Ошибка при оформлении заказа');
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

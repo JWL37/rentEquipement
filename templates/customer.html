@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель управления клиентом</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3>Панель управления клиентом</h3>
+            </div>
+            <div class="card-body">
+                <div id="customer-data">
+                    <h5 class="card-title">Информация о клиенте</h5>
+                    <p><strong>Имя пользователя:</strong> <span id="username">Не указано</span></p>
+                    <p><strong>Электронная почта:</strong> <span id="email">Не указано</span></p>
+                    <p><strong>Номер телефона:</strong> <span id="phone">Не указано</span></p>
+                    <p><strong>Адрес:</strong> <span id="address">Не указано</span></p>
+                </div>
+
+                <div id="error-message" class="alert alert-danger d-none" role="alert">
+                    Не удалось загрузить данные клиента. Пожалуйста, попробуйте снова.
+                </div>
+
+                <div id="orders-section" class="mt-4 d-none">
+                    <h5 class="card-title">Ваши заказы</h5>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID заказа</th>
+                                <th>Название оборудования</th>
+                                <th>Дата начала</th>
+                                <th>Дата окончания</th>
+                                <th>Общая стоимость</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body">
+                            <!-- Заказы будут загружены сюда -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <button class="btn btn-secondary" onclick="window.location.href='/'">Вернуться назад</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Функция для получения значения cookie по имени
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Получаем и отображаем данные клиента
+        const username = getCookie('username');
+
+        if (username) {
+            const customerApiUrl = `/api/v1/customer/${username}`;
+            const ordersApiUrl = `/api/v1/orders`;
+
+            // Загружаем информацию о клиенте
+            fetch(customerApiUrl, {
+                method: 'GET',
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Сетевая ошибка');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('username').textContent = username;
+                    document.getElementById('email').textContent = data.email;
+                    document.getElementById('phone').textContent = data.phone_number;
+                    document.getElementById('address').textContent = data.address;
+
+                    document.getElementById('error-message').classList.add('d-none');
+                })
+                .catch(error => {
+                    console.error('Произошла ошибка при получении данных клиента:', error);
+                    document.getElementById('error-message').classList.remove('d-none');
+                });
+
+            // Загружаем заказы клиента
+            fetch(ordersApiUrl, {
+                method: 'GET',
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Сетевая ошибка при загрузке заказов');
+                    }
+                    return response.json();
+                })
+                .then(orders => {
+                    const ordersTableBody = document.getElementById('orders-table-body');
+                    ordersTableBody.innerHTML = ''; // Очищаем таблицу перед добавлением данных
+
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${order.order_id}</td>
+                            <td>${order.equipment_name}</td>
+                            <td>${new Date(order.start_date).toLocaleDateString()}</td>
+                            <td>${new Date(order.end_date).toLocaleDateString()}</td>
+                            <td>${order.total_cost} руб.</td>
+                        `;
+                        ordersTableBody.appendChild(row);
+                    });
+
+                    document.getElementById('orders-section').classList.remove('d-none');
+                })
+                .catch(error => {
+                    console.error('Произошла ошибка при загрузке заказов:', error);
+                    document.getElementById('error-message').classList.remove('d-none');
+                });
+        } else {
+            document.getElementById('error-message').textContent = 'Cookie с именем пользователя не найдено. Пожалуйста, войдите в систему.';
+            document.getElementById('error-message').classList.remove('d-none');
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

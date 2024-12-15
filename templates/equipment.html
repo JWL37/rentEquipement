@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация об оборудовании</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Заголовок -->
+        <h1 id="equipment-name" class="text-center mb-4">Загрузка...</h1>
+        <div id="equipment-details" class="card mx-auto mb-4" style="max-width: 600px;">
+            <div class="card-body">
+                <!-- Контейнер для информации об оборудовании -->
+                <h5 id="equipment-type" class="card-subtitle mb-2 text-muted"></h5>
+                <p id="equipment-description" class="card-text"></p>
+                <p id="equipment-price" class="card-text"></p>
+                <p id="equipment-availability" class="card-text"></p>
+                <a href="/" class="btn btn-primary mt-3">Назад к списку</a>
+            </div>
+        </div>
+        
+        <!-- Список обслуживания -->
+        <div id="maintenance-section">
+            <h2 class="text-center">Журнал обслуживания</h2>
+            <ul id="maintenance-list" class="list-group mx-auto" style="max-width: 600px;"></ul>
+        </div>
+
+        <!-- Секция с отзывами -->
+        <div id="reviews-section">
+            <h2 class="text-center mt-5">Отзывы</h2>
+            <ul id="reviews-list" class="list-group mx-auto" style="max-width: 600px;"></ul>
+        </div>
+    </div>
+
+    <!-- Подключение Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Скрипт для загрузки данных -->
+    <script>
+        // Функция для получения equipment_ID из пути
+        function getEquipmentIdFromPath() {
+            const pathParts = window.location.pathname.split('/');
+            return pathParts[pathParts.length - 1] || null;
+        }
+
+        // Функция для загрузки информации об оборудовании
+        async function fetchEquipment() {
+            const equipmentId = getEquipmentIdFromPath();
+            if (!equipmentId) {
+                alert('Не указан equipment_ID!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/equipment/${equipmentId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const equipment = await response.json();
+                console.log('Equipment data:', equipment);
+
+                // Обновление информации на странице
+                document.getElementById('equipment-name').textContent = equipment.name;
+                document.getElementById('equipment-type').textContent = `Тип: ${equipment.type}`;
+                document.getElementById('equipment-description').textContent = equipment.description;
+                document.getElementById('equipment-price').textContent = `Цена за день: ${equipment.pricePerDay} руб.`;
+                document.getElementById('equipment-availability').innerHTML = `
+                    Статус: <span class="badge ${equipment.isAvailable ? 'bg-success' : 'bg-danger'}">
+                        ${equipment.isAvailable ? 'Доступно' : 'Недоступно'}
+                    </span>
+                `;
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+                document.getElementById('equipment-details').innerHTML = `
+                    <p class="text-center text-danger">Не удалось загрузить информацию об оборудовании.</p>
+                `;
+            }
+        }
+
+        // Функция для загрузки списка обслуживания
+        async function fetchMaintenance() {
+            const equipmentId = getEquipmentIdFromPath();
+            if (!equipmentId) {
+                alert('Не указан equipment_ID!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/equipment/${equipmentId}/maintenance`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const text = await response.text();
+                let maintenanceList = [];
+                if (text.trim()) {
+                    try {
+                        maintenanceList = JSON.parse(text);
+                        if (!Array.isArray(maintenanceList)) {
+                            throw new Error("Ответ не является массивом");
+                        }
+                    } catch (error) {
+                        console.warn('Не удалось разобрать ответ как JSON. Ответ:', text);
+                        maintenanceList = [];
+                    }
+                }
+
+                const listContainer = document.getElementById('maintenance-list');
+                if (maintenanceList.length === 0) {
+                    listContainer.innerHTML = '<li class="list-group-item text-center">Не был на обслуживании.</li>';
+                } else {
+                    maintenanceList.forEach(maintenance => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item';
+                        listItem.innerHTML = `
+                            <strong>Дата:</strong> ${new Date(maintenance.date).toLocaleDateString()}<br>
+                            <strong>Описание:</strong> ${maintenance.description}
+                        `;
+                        listContainer.appendChild(listItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+                document.getElementById('maintenance-section').innerHTML = `
+                    <p class="text-center text-danger">Не удалось загрузить журнал обслуживания.</p>
+                `;
+            }
+        }
+
+        // Функция для загрузки отзывов
+        async function fetchReviews() {
+            const equipmentId = getEquipmentIdFromPath();
+            if (!equipmentId) {
+                alert('Не указан equipment_ID!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/equipment/${equipmentId}/reviews`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const reviews = await response.json();
+                console.log('Reviews data:', reviews);
+
+                const listContainer = document.getElementById('reviews-list');
+                if (reviews.length === 0) {
+                    listContainer.innerHTML = '<li class="list-group-item text-center">Нет отзывов для этого оборудования.</li>';
+                } else {
+                    reviews.forEach(review => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item';
+                        listItem.innerHTML = `
+                            <strong>Оценка:</strong> ${review.rating} / 5<br>
+                            <strong>Комментарий:</strong> ${review.comment}<br>
+                            <strong>Дата отзыва:</strong> ${new Date(review.review_date).toLocaleDateString()}
+                        `;
+                        listContainer.appendChild(listItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке отзывов:', error);
+                document.getElementById('reviews-section').innerHTML = `
+                    <p class="text-center text-danger">Не удалось загрузить отзывы.</p>
+                `;
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchEquipment();
+            fetchMaintenance();
+            fetchReviews();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список оборудования</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-3">
+        <!-- Верхняя панель -->
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-center">Список оборудования</h1>
+            <div id="auth-buttons" class="d-flex align-items-center">
+                <!-- Сюда будут добавлены кнопки или имя пользователя -->
+            </div>
+        </div>
+        <hr>
+        <!-- Контейнер для списка оборудования -->
+        <div id="equipment-list" class="row">
+            <!-- Список оборудования будет добавлен сюда динамически -->
+        </div>
+    </div>
+
+    <!-- Подключение Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Скрипт для работы с куками и загрузки данных -->
+    <script>
+        // Функция для чтения куки по имени
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Функция для проверки куки и отображения кнопок или имени пользователя
+        function checkAuth() {
+            const authContainer = document.getElementById('auth-buttons');
+            const username = getCookie('username');
+
+            if (username) {
+                authContainer.innerHTML = `
+                    <a href="/info" class="btn btn-info me-3">Моя информация</a>
+                    <a href="/order" id="rent-button" class="btn btn-warning me-2">Арендовать</a>
+                    <a href="/logout" class="btn btn-outline-danger">Выход</a>
+                `;
+            } else {
+                authContainer.innerHTML = `
+                    <a href="/login" class="btn btn-outline-primary me-2">Вход</a>
+                    <a href="/register" class="btn btn-outline-success">Регистрация</a>
+                `;
+            }
+        }
+
+        // Загрузка списка оборудования
+        async function fetchEquipments() {
+            try {
+                const response = await fetch('/api/v1/equipments');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const equipments = await response.json();
+
+                // Отображение оборудования
+                const listContainer = document.getElementById('equipment-list');
+                if (equipments.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-muted">Нет доступного оборудования.</p>';
+                }
+                equipments.forEach(equipment => {
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4 mb-4';
+
+                    card.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${equipment.name}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${equipment.type}</h6>
+                                <p class="card-text">${equipment.description}</p>
+                                <p class="card-text"><strong>Цена за день:</strong> ${equipment.pricePerDay} руб.</p>
+                                <p class="card-text">
+                                    <span class="badge ${equipment.isAvailable ? 'bg-success' : 'bg-danger'}">
+                                        ${equipment.isAvailable ? 'Доступно' : 'Недоступно'}
+                                    </span>
+                                </p>
+                                <!-- Кнопка для перехода на страницу оборудования -->
+                                <a href="/equipment/${equipment.id}" class="btn btn-primary w-100">
+                                    Подробнее
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+                document.getElementById('equipment-list').innerHTML = `
+                    <p class="text-center text-danger">Не удалось загрузить список оборудования.</p>
+                `;
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            fetchEquipments();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель Админа</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-3">
+        <!-- Заголовок Панель Админа -->
+        <div class="text-center mb-4">
+            <h1>Панель Админа</h1>
+        </div>
+
+        <!-- Контейнер для списка оборудования -->
+        <div id="equipment-list" class="row">
+            <!-- Список оборудования будет добавлен сюда динамически -->
+        </div>
+
+        <!-- Кнопка для возвращения на главную страницу -->
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-primary">Вернуться на главную</a>
+        </div>
+
+        <!-- Контейнер для логов -->
+        <div id="logs-container" class="mt-5">
+            <h3>Логи</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Время</th>
+                        <th scope="col">Тип события</th>
+                        <th scope="col">ID пользователя</th>
+                        <th scope="col">Сообщение</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-list">
+                    <!-- Логи будут добавлены сюда динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Подключение Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Скрипт для загрузки данных оборудования и логов -->
+    <script>
+        // Загрузка списка оборудования
+        async function fetchEquipments() {
+            try {
+                const response = await fetch('/api/v1/notequipments');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const equipments = await response.json();
+
+                // Отображение оборудования
+                const listContainer = document.getElementById('equipment-list');
+                if (equipments.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-muted">Нет доступного оборудования.</p>';
+                }
+                equipments.forEach(equipment => {
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4 mb-4';
+                    card.dataset.equipmentId = equipment.id; // Сохраняем ID для доступа к нему
+
+                    card.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${equipment.name}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${equipment.type}</h6>
+                                <p class="card-text">${equipment.description}</p>
+                                <p class="card-text"><strong>Цена за день:</strong> ${equipment.pricePerDay} руб.</p>
+                                <p class="card-text">
+                                    <span class="badge ${equipment.isAvailable ? 'bg-success' : 'bg-danger'}">
+                                        ${equipment.isAvailable ? 'Доступно' : 'Недоступно'}
+                                    </span>
+                                </p>
+                                <!-- Кнопка для перехода на страницу оборудования -->
+                                <a href="/equipment/${equipment.id}" class="btn btn-primary w-100 mb-2">
+                                    Подробнее
+                                </a>
+                                <!-- Кнопка "Дать доступ" -->
+                                <button class="btn btn-success w-100" onclick="makeAvailable('${equipment.id}')">
+                                    Дать доступ
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+                document.getElementById('equipment-list').innerHTML = `
+                    <p class="text-center text-danger">Не удалось загрузить список оборудования.</p>
+                `;
+            }
+        }
+
+        // Функция для вызова ручки "Дать доступ"
+        async function makeAvailable(equipmentId) {
+            try {
+                const response = await fetch(`/api/v1/admin/equipment/${equipmentId}/do_available`, {
+                    method: 'GET',
+                });
+                if (!response.ok) {
+                    throw new Error(`Ошибка при обновлении доступности: ${response.status}`);
+                }
+
+                // Обновить статус на фронте без получения данных от сервера
+                const equipmentCard = document.querySelector(`[data-equipment-id="${equipmentId}"]`);
+                if (equipmentCard) {
+                    const statusBadge = equipmentCard.querySelector('.badge');
+                    statusBadge.classList.remove('bg-danger');
+                    statusBadge.classList.add('bg-success');
+                    statusBadge.textContent = 'Доступно';
+                }
+
+                alert('Оборудование теперь доступно!');
+            } catch (error) {
+                console.error('Ошибка при вызове ручки "Дать доступ":', error);
+                alert('Не удалось обновить статус оборудования.');
+            }
+        }
+
+        // Загрузка логов
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/v1/admin/getlogs');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const logs = await response.json();
+
+                // Отображение логов
+                const logsContainer = document.getElementById('logs-list');
+                if (logs.length === 0) {
+                    logsContainer.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет доступных логов.</td></tr>';
+                }
+                logs.forEach(log => {
+                    const logRow = document.createElement('tr');
+                    logRow.innerHTML = `
+                        <td>${log.id}</td>
+                        <td>${new Date(log.event_time).toLocaleString()}</td>
+                        <td>${log.event_type}</td>
+                        <td>${log.user_id}</td>
+                        <td>${log.message}</td>
+                    `;
+                    logsContainer.appendChild(logRow);
+                });
+            } catch (error) {
+                console.error('Ошибка при загрузке логов:', error);
+                document.getElementById('logs-list').innerHTML = `
+                    <tr><td colspan="5" class="text-center text-danger">Не удалось загрузить логи.</td></tr>
+                `;
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchEquipments();
+            fetchLogs();
+        });
+    </script>
+</body>
+</html>
