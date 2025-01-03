@@ -1,4 +1,14 @@
 services:
+  backend:
+    image: rent_app
+    container_name: super_app
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
   postgres:
     image: postgres
     container_name: postgres
@@ -6,9 +16,15 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: psswd
-      POSTGRES_DB: postgresDB
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d postgresDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - './migrations/:/docker-entrypoint-initdb.d/'
-    command: ["postgres", "-c", "log_statement=all"] 
+    # command: ["postgres", "-c", "log_statement=all"] 
+    
