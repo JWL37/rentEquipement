@@ -89,11 +89,11 @@ func (h *EquipmentHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	equipmentID := r.FormValue("equipment_ID")
-	log.Printf(equipmentID)
+	log.Println(equipmentID)
 	startRentStr := r.FormValue("startRent")
-	log.Printf(startRentStr)
+	log.Println(startRentStr)
 	countDayStr := r.FormValue("countDay")
-	log.Printf(countDayStr)
+	log.Println(countDayStr)
 
 	startDate, err := time.Parse("2006-01-02", startRentStr)
 	if err != nil {

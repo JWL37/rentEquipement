@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"rentEquipement/internal/repository/user"
 	"rentEquipement/internal/session"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -204,4 +205,30 @@ func (h *UserHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(ordersForCustomer); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	expiredCookie := &http.Cookie{
+		Name:    "session_id",
+		Value:   "",
+		Expires: time.Now().Add(-1 * time.Hour),
+		Path:    "/",
+	}
+	http.SetCookie(w, expiredCookie)
+	expiredUsernameCookie := &http.Cookie{
+		Name:    "username",
+		Value:   "",
+		Expires: time.Now().Add(-1 * time.Hour),
+		Path:    "/",
+	}
+
+	http.SetCookie(w, expiredUsernameCookie)
+	// err := h.Sessions.DestroyCurrent(w, r)
+	// if err != nil {
+	// 	log.Printf("Logout. Error: %s. \n", err)
+	// 	http.Error(w, "unauthorized", http.StatusUnauthorized)
+	// 	return
+	// }
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }

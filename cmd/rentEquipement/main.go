@@ -69,6 +69,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Get("/", equipmentHandler.FrontListEquipments)
 	r.Get("/login", userHandler.FormLogin)
+	r.Get("/logout", userHandler.Logout)
 	r.Get("/register", userHandler.FormRegister)
 	r.Get("/equipment/{equipment_ID}", equipmentHandler.FrontEquipmentInfo)
 
