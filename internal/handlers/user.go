@@ -75,9 +75,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		log.Println("Password hash error:", err)
 		return
 	}
-	user, err := h.Repo.CreateUser(username, hashedPassword, email, phoneNumber, address)
-
-	log.Println(user.Role)
+	user, _ := h.Repo.CreateUser(username, hashedPassword, email, phoneNumber, address)
 
 	h.Sessions.Create(w, user.ID, user.Username, user.Role)
 
@@ -136,7 +134,7 @@ func (h *UserHandler) CustomerInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usernameFront, err := GetCookieValue(r, "username")
+	usernameFront, _ := GetCookieValue(r, "username")
 	if usernameFront != username {
 		http.Error(w, "no your username", http.StatusForbidden)
 		return

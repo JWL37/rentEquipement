@@ -11,7 +11,6 @@ type AuthMiddleware struct {
 }
 
 func (am *AuthMiddleware) Auth(next http.Handler) http.Handler {
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("auth middleware", r.URL.Path)
 

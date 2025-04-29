@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -9,6 +10,7 @@ import (
 	"rentEquipement/internal/config"
 	"rentEquipement/internal/handlers"
 	m "rentEquipement/internal/middleware"
+	redisClient "rentEquipement/internal/redis"
 	"rentEquipement/internal/repository/equipment"
 	"rentEquipement/internal/repository/maintenance"
 	"rentEquipement/internal/repository/review"
@@ -25,17 +27,26 @@ func main() {
 	config.ParseConfig(cfg)
 	portApp := fmt.Sprintf(":%s", cfg.Port)
 	fmt.Println(cfg.DSN)
+
 	db, _ := sql.Open("pgx", cfg.DSN)
 	db.SetMaxOpenConns(10)
 	defer db.Close()
 	err := db.Ping()
-	// conn, err := pgx.Connect(context.Background(), cfg.DSN)
-	// defer conn.Close(context.Background())
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
+
+	redis := redisClient.NewRedisClient(cfg)
+	err = redis.Ping(context.Background())
+	if err != nil {
+		log.Fatalf("Unable to connect to Redis: %v\n", err)
+	}
+	log.Println("Connected to Redis")
+
 	templates := template.Must(template.ParseGlob("templates/*"))
-	sm := session.NewSessionsManager()
+
+	sm := session.NewSessionsManager(redis, cfg)
+
 	userRep := user.NewRep(db)
 	maintenanceRep := maintenance.NewRep(db)
 	equipmentRep := equipment.NewRep(db)
@@ -61,9 +72,11 @@ func main() {
 		Tmpl:     templates,
 		Sessions: sm,
 	}
+
 	auth := m.AuthMiddleware{
 		SM: sm,
 	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
